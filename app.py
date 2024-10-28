@@ -3,10 +3,13 @@ import os
 from services import bedrock_agent_runtime
 import streamlit as st
 import uuid
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Get config from environment variables
 agent_id = os.environ.get("BEDROCK_AGENT_ID")
-agent_alias_id = os.environ.get("BEDROCK_AGENT_ALIAS_ID", "TSTALIASID") # TSTALIASID is the default test alias ID
+agent_alias_id = os.environ.get("BEDROCK_AGENT_ALIAS_ID")
 ui_title = os.environ.get("BEDROCK_AGENT_TEST_UI_TITLE", "Agents for Amazon Bedrock Test UI")
 ui_icon = os.environ.get("BEDROCK_AGENT_TEST_UI_ICON")
 
@@ -15,6 +18,16 @@ def init_state():
     st.session_state.messages = []
     st.session_state.citations = []
     st.session_state.trace = {}
+
+def format_response_text(text):
+    # Example transformation: Replace bullet points or section markers with HTML
+    formatted_text = text.replace("•", "<li>").replace("\n", "</li>\n")
+    
+    # Wrap everything in <ul> tags if it's a list
+    if "<li>" in formatted_text:
+        formatted_text = f"<ul>{formatted_text}</ul>"
+    
+    return formatted_text
 
 # General page configuration and initialization
 st.set_page_config(page_title=ui_title, page_icon=ui_icon, layout="wide")
@@ -48,6 +61,9 @@ if prompt := st.chat_input():
             prompt
         )
         output_text = response["output_text"]
+
+        # Format the output text for better readability
+        # output_text = format_response_text(output_text)
 
         # Add citations
         if len(response["citations"]) > 0:
