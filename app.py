@@ -8,10 +8,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Get config from environment variables
-agent_id = os.environ.get("BEDROCK_AGENT_ID")
-agent_alias_id = os.environ.get("BEDROCK_AGENT_ALIAS_ID")
-ui_title = os.environ.get("BEDROCK_AGENT_TEST_UI_TITLE", "Agents for Amazon Bedrock Test UI")
-ui_icon = os.environ.get("BEDROCK_AGENT_TEST_UI_ICON")
+agent_id = st.secrets["BEDROCK_AGENT_ID"]
+agent_alias_id = st.secrets["BEDROCK_AGENT_ALIAS_ID"]
+ui_title = st.secrets.get("BEDROCK_AGENT_TEST_UI_TITLE", "Agents for Amazon Bedrock Test UI")
+ui_icon = st.secrets.get("BEDROCK_AGENT_TEST_UI_ICON")
 
 def init_state():
     st.session_state.session_id = str(uuid.uuid4())
