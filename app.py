@@ -71,7 +71,7 @@ if prompt := st.chat_input():
             num_citation_chars = 0
             citation_locs = ""
             for citation in response["citations"]:
-                end_span = citation["generatedResponsePart"]["textResponsePart"]["span"]["end"] + 1
+                end_span = citation["generatedResponsePart"]["textResponsePart"]["span"]["end"] + 3
                 for retrieved_ref in citation["retrievedReferences"]:
                     citation_marker = f"[{citation_num}]"
                     output_text = output_text[:end_span + num_citation_chars] + citation_marker + output_text[end_span + num_citation_chars:]
