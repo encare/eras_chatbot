@@ -4,6 +4,7 @@ from services import bedrock_agent_runtime
 import streamlit as st
 import uuid
 from dotenv import load_dotenv
+from streamlit import tabs
 
 load_dotenv()
 
@@ -13,79 +14,102 @@ agent_alias_id = st.secrets["BEDROCK_AGENT_ALIAS_ID"]
 ui_title = st.secrets.get("BEDROCK_AGENT_TEST_UI_TITLE", "Agents for Amazon Bedrock Test UI")
 ui_icon = st.secrets.get("BEDROCK_AGENT_TEST_UI_ICON")
 
-def init_state():
-    st.session_state.session_id = str(uuid.uuid4())
-    st.session_state.messages = []
-    st.session_state.citations = []
-    st.session_state.trace = {}
-
-def format_response_text(text):
-    # Example transformation: Replace bullet points or section markers with HTML
-    formatted_text = text.replace("•", "<li>").replace("\n", "</li>\n")
-    
-    # Wrap everything in <ul> tags if it's a list
-    if "<li>" in formatted_text:
-        formatted_text = f"<ul>{formatted_text}</ul>"
-    
-    return formatted_text
+# Get config for the second chatbot
+agent2_id = st.secrets["BEDROCK_AGENT2_ID"]
+agent2_alias_id = st.secrets["BEDROCK_AGENT2_ALIAS_ID"]
 
 # General page configuration and initialization
 st.set_page_config(page_title=ui_title, page_icon=ui_icon, layout="wide")
 st.title(ui_title)
-if len(st.session_state.items()) == 0:
-    init_state()
 
-# Sidebar button to reset session state
-with st.sidebar:
-    if st.button("Reset Session"):
-        init_state()
+# Initialize session state for both chatbots
+if "chatbot1" not in st.session_state:
+    st.session_state.chatbot1 = {
+        "session_id": str(uuid.uuid4()),
+        "messages": [],
+        "citations": [],
+        "trace": {}
+    }
 
-# Messages in the conversation
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"], unsafe_allow_html=True)
+if "chatbot2" not in st.session_state:
+    st.session_state.chatbot2 = {
+        "session_id": str(uuid.uuid4()),
+        "messages": [],
+        "citations": [],
+        "trace": {}
+    }
 
-# Chat input that invokes the agent
-if prompt := st.chat_input():
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.write(prompt)
+# Function to reset session state for a specific chatbot
+def reset_chatbot_state(chatbot_key):
+    st.session_state[chatbot_key] = {
+        "session_id": str(uuid.uuid4()),
+        "messages": [],
+        "citations": [],
+        "trace": {}
+    }
 
-    with st.chat_message("assistant"):
-        placeholder = st.empty()
-        placeholder.markdown("...")
-        response = bedrock_agent_runtime.invoke_agent(
-            agent_id,
-            agent_alias_id,
-            st.session_state.session_id,
-            prompt
-        )
-        output_text = response["output_text"]
+# Create tabs for the two chatbots
+tab1, tab2 = st.tabs(["ERAS Essential Chatbot", "JIRA Customer Tickets Chatbot"])
 
-        # Format the output text for better readability
-        # output_text = format_response_text(output_text)
+# Chatbot 1 tab
+with tab1:
+    st.subheader("Chat with ERAS Essential Chatbot")
+    if st.button("Reset ERAS Essential Chatbot"):
+        reset_chatbot_state("chatbot1")
 
-        # Add citations
-        if len(response["citations"]) > 0:
-            citation_num = 1
-            num_citation_chars = 0
-            citation_locs = ""
-            for citation in response["citations"]:
-                end_span = citation["generatedResponsePart"]["textResponsePart"]["span"]["end"] + 3
-                for retrieved_ref in citation["retrievedReferences"]:
-                    citation_marker = f"[{citation_num}]"
-                    output_text = output_text[:end_span + num_citation_chars] + citation_marker + output_text[end_span + num_citation_chars:]
-                    citation_locs = citation_locs + "\n<br>" + citation_marker + " " + retrieved_ref["location"]["s3Location"]["uri"]
-                    citation_num = citation_num + 1
-                    num_citation_chars = num_citation_chars + len(citation_marker)
-                output_text = output_text[:end_span + num_citation_chars] + "\n" + output_text[end_span + num_citation_chars:]
-                num_citation_chars = num_citation_chars + 1
-            output_text = output_text + "\n" + citation_locs
+    for message in st.session_state.chatbot1["messages"]:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"], unsafe_allow_html=True)
 
-        placeholder.markdown(output_text, unsafe_allow_html=True)
-        st.session_state.messages.append({"role": "assistant", "content": output_text})
-        st.session_state.citations = response["citations"]
-        st.session_state.trace = response["trace"]
+    if prompt := st.chat_input(key=1):
+        st.session_state.chatbot1["messages"].append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.write(prompt)
+
+        with st.chat_message("assistant"):
+            placeholder = st.empty()
+            placeholder.markdown("...")
+            response = bedrock_agent_runtime.invoke_agent(
+                agent_id,
+                agent_alias_id,
+                st.session_state.chatbot1["session_id"],
+                prompt
+            )
+            output_text = response["output_text"]
+            placeholder.markdown(output_text, unsafe_allow_html=True)
+            st.session_state.chatbot1["messages"].append({"role": "assistant", "content": output_text})
+            st.session_state.chatbot1["citations"] = response["citations"]
+            st.session_state.chatbot1["trace"] = response["trace"]
+
+# Chatbot 2 tab
+with tab2:
+    st.subheader("Chat with JIRA Customer Tickets Chatbot")
+    if st.button("Reset JIRA Customer Tickets Chatbot"):
+        reset_chatbot_state("chatbot2")
+
+    for message in st.session_state.chatbot2["messages"]:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"], unsafe_allow_html=True)
+
+    if prompt := st.chat_input(key=2):
+        st.session_state.chatbot2["messages"].append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.write(prompt)
+
+        with st.chat_message("assistant"):
+            placeholder = st.empty()
+            placeholder.markdown("...")
+            response = bedrock_agent_runtime.invoke_agent(
+                agent2_id,
+                agent2_alias_id,
+                st.session_state.chatbot2["session_id"],
+                prompt
+            )
+            output_text = response["output_text"]
+            placeholder.markdown(output_text, unsafe_allow_html=True)
+            st.session_state.chatbot2["messages"].append({"role": "assistant", "content": output_text})
+            st.session_state.chatbot2["citations"] = response["citations"]
+            st.session_state.chatbot2["trace"] = response["trace"]
 
 trace_types_map = {
     "Pre-Processing": ["preGuardrailTrace", "preProcessingTrace"],
@@ -111,11 +135,11 @@ with st.sidebar:
         # Organize traces by step similar to how it is shown in the Bedrock console
         has_trace = False
         for trace_type in trace_types_map[trace_type_header]:
-            if trace_type in st.session_state.trace:
+            if trace_type in st.session_state.chatbot1["trace"]:
                 has_trace = True
                 trace_steps = {}
 
-                for trace in st.session_state.trace[trace_type]:
+                for trace in st.session_state.chatbot1["trace"][trace_type]:
                     # Each trace type and step may have different information for the end-to-end flow
                     if trace_type in trace_info_types_map:
                         trace_info_types = trace_info_types_map[trace_type]
@@ -146,9 +170,9 @@ with st.sidebar:
             st.text("None")
 
     st.subheader("Citations")
-    if len(st.session_state.citations) > 0:
+    if len(st.session_state.chatbot1["citations"]) > 0:
         citation_num = 1
-        for citation in st.session_state.citations:
+        for citation in st.session_state.chatbot1["citations"]:
             for retrieved_ref_num, retrieved_ref in enumerate(citation["retrievedReferences"]):
                 with st.expander("Citation [" + str(citation_num) + "]", expanded=False):
                     citation_str = json.dumps({
