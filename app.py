@@ -76,6 +76,28 @@ with tab1:
                 prompt
             )
             output_text = response["output_text"]
+            # Add citations
+            if len(response["citations"]) > 0:
+                citation_num = 1
+                num_citation_chars = 0
+                citation_locs = ""
+                for citation in response["citations"]:
+                    end_span = citation["generatedResponsePart"]["textResponsePart"]["span"]["end"] + 3
+                    for retrieved_ref in citation["retrievedReferences"]:
+                        citation_marker = f"[{citation_num}]"
+                        output_text = output_text[:end_span + num_citation_chars] + citation_marker + output_text[end_span + num_citation_chars:]
+                        
+                        # Extract the file name from the S3 URI
+                        s3_uri = retrieved_ref["location"]["s3Location"]["uri"]
+                        file_name = s3_uri.split("/")[-1]  # Get the file name from the URI
+                        
+                        citation_locs = citation_locs + f"\n<br>{citation_marker} {file_name}"
+                        citation_num += 1
+                        num_citation_chars += len(citation_marker)
+                    
+                    output_text = output_text[:end_span + num_citation_chars] + "\n" + output_text[end_span + num_citation_chars:]
+                    num_citation_chars += 1
+                output_text = output_text + "\n" + citation_locs
             placeholder.markdown(output_text, unsafe_allow_html=True)
             st.session_state.chatbot1["messages"].append({"role": "assistant", "content": output_text})
             st.session_state.chatbot1["citations"] = response["citations"]
@@ -106,6 +128,29 @@ with tab2:
                 prompt
             )
             output_text = response["output_text"]
+            # Add citations
+            if len(response["citations"]) > 0:
+                citation_num = 1
+                num_citation_chars = 0
+                citation_locs = ""
+                for citation in response["citations"]:
+                    end_span = citation["generatedResponsePart"]["textResponsePart"]["span"]["end"] + 3
+                    for retrieved_ref in citation["retrievedReferences"]:
+                        citation_marker = f"[{citation_num}]"
+                        output_text = output_text[:end_span + num_citation_chars] + citation_marker + output_text[end_span + num_citation_chars:]
+                        
+                        # Extract the file name from the S3 URI
+                        s3_uri = retrieved_ref["location"]["s3Location"]["uri"]
+                        file_name = s3_uri.split("/")[-1]  # Get the file name from the URI
+                        
+                        citation_locs = citation_locs + f"\n<br>{citation_marker} {file_name}"
+                        citation_num += 1
+                        num_citation_chars += len(citation_marker)
+                    
+                    output_text = output_text[:end_span + num_citation_chars] + "\n" + output_text[end_span + num_citation_chars:]
+                    num_citation_chars += 1
+                output_text = output_text + "\n" + citation_locs
+
             placeholder.markdown(output_text, unsafe_allow_html=True)
             st.session_state.chatbot2["messages"].append({"role": "assistant", "content": output_text})
             st.session_state.chatbot2["citations"] = response["citations"]
