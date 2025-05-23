@@ -1,0 +1,16 @@
+{
+    "test_pairs": [
+        {
+            "question": "What is ERAS?",
+            "ground_truth": "ERAS (Enhanced Recovery After Surgery) is a modern surgical care protocol that aims to help patients recover faster after surgery."
+        },
+        {
+            "question": "How long is hospital stay after surgery?",
+            "ground_truth": "The length of hospital stay varies depending on the type of surgery, but ERAS protocols typically help reduce hospital stay duration compared to traditional care."
+        },
+        {
+            "question": "When can I eat after surgery?",
+            "ground_truth": "With ERAS protocols, you can usually start drinking clear liquids within hours after surgery and resume eating regular food within 24 hours, as tolerated."
+        }
+    ]
+}
