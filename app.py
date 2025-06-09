@@ -75,13 +75,20 @@ with tab1:
                 st.session_state.chatbot1["session_id"],
                 prompt
             )
-            output_text = response["output_text"]
-            # Add citations
-            if len(response["citations"]) > 0:
+            for result in response:
+                output_text = result["output_text"]
+                citations = result["citations"]
+                trace = result["trace"]
+
+                # Display streaming output
+                placeholder.markdown(output_text, unsafe_allow_html=True)
+
+            # Add citations to final response
+            if len(citations) > 0:
                 citation_num = 1
                 num_citation_chars = 0
                 citation_locs = ""
-                for citation in response["citations"]:
+                for citation in citations:
                     end_span = citation["generatedResponsePart"]["textResponsePart"]["span"]["end"] + 3
                     for retrieved_ref in citation["retrievedReferences"]:
                         citation_marker = f"[{citation_num}]"
@@ -100,8 +107,8 @@ with tab1:
                 output_text = output_text + "\n" + citation_locs
             placeholder.markdown(output_text, unsafe_allow_html=True)
             st.session_state.chatbot1["messages"].append({"role": "assistant", "content": output_text})
-            st.session_state.chatbot1["citations"] = response["citations"]
-            st.session_state.chatbot1["trace"] = response["trace"]
+            st.session_state.chatbot1["citations"] = citations
+            st.session_state.chatbot1["trace"] = trace
 
 # Chatbot 2 tab
 with tab2:
@@ -127,13 +134,20 @@ with tab2:
                 st.session_state.chatbot2["session_id"],
                 prompt
             )
-            output_text = response["output_text"]
-            # Add citations
-            if len(response["citations"]) > 0:
+            for result in response:
+                output_text = result["output_text"]
+                citations = result["citations"]
+                trace = result["trace"]
+                
+                # Display streaming output
+                placeholder.markdown(output_text, unsafe_allow_html=True)
+
+            # Add citations to final response
+            if len(citations) > 0:
                 citation_num = 1
                 num_citation_chars = 0
                 citation_locs = ""
-                for citation in response["citations"]:
+                for citation in citations:
                     end_span = citation["generatedResponsePart"]["textResponsePart"]["span"]["end"] + 3
                     for retrieved_ref in citation["retrievedReferences"]:
                         citation_marker = f"[{citation_num}]"
@@ -153,8 +167,8 @@ with tab2:
 
             placeholder.markdown(output_text, unsafe_allow_html=True)
             st.session_state.chatbot2["messages"].append({"role": "assistant", "content": output_text})
-            st.session_state.chatbot2["citations"] = response["citations"]
-            st.session_state.chatbot2["trace"] = response["trace"]
+            st.session_state.chatbot2["citations"] = citations
+            st.session_state.chatbot2["trace"] = trace
 
 trace_types_map = {
     "Pre-Processing": ["preGuardrailTrace", "preProcessingTrace"],
