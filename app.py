@@ -18,6 +18,9 @@ ui_icon = st.secrets.get("BEDROCK_AGENT_TEST_UI_ICON")
 agent2_id = st.secrets["BEDROCK_AGENT2_ID"]
 agent2_alias_id = st.secrets["BEDROCK_AGENT2_ALIAS_ID"]
 
+agent3_id = st.secrets["BEDROCK_AGENT3_ID"]
+agent3_alias_id = st.secrets["BEDROCK_AGENT3_ALIAS_ID"]
+
 # General page configuration and initialization
 st.set_page_config(page_title=ui_title, page_icon=ui_icon, layout="wide")
 st.title(ui_title)
@@ -39,6 +42,14 @@ if "chatbot2" not in st.session_state:
         "trace": {}
     }
 
+if "chatbot3" not in st.session_state:
+    st.session_state.chatbot3 = {
+        "session_id": str(uuid.uuid4()),
+        "messages": [],
+        "citations": [],
+        "trace": {}
+    }
+
 # Function to reset session state for a specific chatbot
 def reset_chatbot_state(chatbot_key):
     st.session_state[chatbot_key] = {
@@ -49,7 +60,7 @@ def reset_chatbot_state(chatbot_key):
     }
 
 # Create tabs for the two chatbots
-tab1, tab2 = st.tabs(["ERAS Essential Chatbot", "JIRA Customer Tickets Chatbot"])
+tab1, tab2, tab3 = st.tabs(["ERAS Essential Chatbot", "JIRA Customer Tickets Chatbot", "ERAS Colorectal Chatbot"])
 
 # Chatbot 1 tab
 with tab1:
@@ -169,6 +180,67 @@ with tab2:
             st.session_state.chatbot2["messages"].append({"role": "assistant", "content": output_text})
             st.session_state.chatbot2["citations"] = citations
             st.session_state.chatbot2["trace"] = trace
+
+# Chatbot 3 tab
+with tab3:
+    st.subheader("Chat with ERAS Colorectal Chatbot")
+    if st.button("Reset ERAS Colorectal Chatbot"):
+        reset_chatbot_state("chatbot3")
+
+    for message in st.session_state.chatbot3["messages"]:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"], unsafe_allow_html=True)
+
+    if prompt := st.chat_input(key=3):
+        st.session_state.chatbot3["messages"].append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.write(prompt)
+
+        with st.chat_message("assistant"):
+            placeholder = st.empty()
+            placeholder.markdown("...")
+            response = bedrock_agent_runtime.invoke_agent(
+                agent3_id,
+                agent3_alias_id,
+                st.session_state.chatbot3["session_id"],
+                prompt
+            )
+            for result in response:
+                output_text = result["output_text"]
+                citations = result["citations"]
+                trace = result["trace"]
+                
+                # Display streaming output
+                placeholder.markdown(output_text, unsafe_allow_html=True)
+
+            # Add citations to final response
+            if len(citations) > 0:
+                citation_num = 1
+                num_citation_chars = 0
+                citation_locs = ""
+                for citation in citations:
+                    end_span = citation["generatedResponsePart"]["textResponsePart"]["span"]["end"] + 3
+                    for retrieved_ref in citation["retrievedReferences"]:
+                        citation_marker = f"[{citation_num}]"
+                        output_text = output_text[:end_span + num_citation_chars] + citation_marker + output_text[end_span + num_citation_chars:]
+                        
+                        # Extract the file name from the S3 URI
+                        s3_uri = retrieved_ref["location"]["s3Location"]["uri"]
+                        file_name = s3_uri.split("/")[-1]  # Get the file name from the URI
+                        
+                        citation_locs = citation_locs + f"\n<br>{citation_marker} {file_name}"
+                        citation_num += 1
+                        num_citation_chars += len(citation_marker)
+                    
+                    output_text = output_text[:end_span + num_citation_chars] + "\n" + output_text[end_span + num_citation_chars:]
+                    num_citation_chars += 1
+                output_text = output_text + "\n" + citation_locs
+
+            placeholder.markdown(output_text, unsafe_allow_html=True)
+            st.session_state.chatbot3["messages"].append({"role": "assistant", "content": output_text})
+            st.session_state.chatbot3["citations"] = citations
+            st.session_state.chatbot3["trace"] = trace
+
 
 trace_types_map = {
     "Pre-Processing": ["preGuardrailTrace", "preProcessingTrace"],
